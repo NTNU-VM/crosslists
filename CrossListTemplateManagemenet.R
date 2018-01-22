@@ -6,12 +6,21 @@ require(sp)
 require(ggmap)
 require(gridExtra)
 require(rgdal)
+
+
+# type in the URLs for your data
+dat <- "M:\\Anders L Kolstad\\R\\R_projects\\crosslists\\test_data2.xlsx"
+tax <- "M:\\Anders L Kolstad\\R\\R_projects\\crosslists\\Crosslist_Shiny\\Crosslist_Shiny\\data\\TAXAREG.csv"
+destination <- "M:\\Anders L Kolstad\\R\\R_projects\\crosslists"
+
+
+
 # Importing species data and metadata -------------------------------------
 
 
 crosslist <-
   read.xlsx(
-    'ADD URL',
+    paste(dat),
     sheetName = 'Species',
     endRow = 84,
     stringsAsFactors = F,
@@ -20,7 +29,7 @@ crosslist <-
 
 metadata_t <-
   read.xlsx(
-    'ADD URL',
+    paste(dat),
     sheetName = 'MetaData',
     stringsAsFactors = F,
     header = F,
@@ -55,29 +64,35 @@ df2$taxa <- gsub("[#]", 'var.', df2$taxa)
 #This removes class names (all uppercase, and NAs and '...' etc)
 df3 <- df2[grep("[a-z]", df2$taxa), ]
 
+
 #Genus names have a capital letter
 genusnames <- df3[grep("[A-Z]", df3$taxa), ]
 speciesnames <- df3[grep("[A-Z]", df3$taxa, invert = T), ]
 
 #Trim leading space from species names
-trim.leading <- function (x)
+trim.leading <- function (x){
   sub("^\\s+", "", x)
-speciesnames[, 1] <- trim.leading(speciesnames[, 1])
+}
 
+
+speciesnames[, 1] <- trim.leading(speciesnames[, 1])
 speciesnames[, 1] <- gsub("c ", " ", speciesnames[, 1])
 
 
 #Need to include species epitphet in subspecies and variety names
 speciesnames$fullnames2 <- c()
-for (i in 1:length(speciesnames$taxa)) {
-  if (grepl("subsp", speciesnames$taxa[i]) == T |
-      grepl("var", speciesnames$taxa[i]) == T)
-    print(i)
-}
+#for (i in 1:length(speciesnames$taxa)) {
+#  if (grepl("subsp", speciesnames$taxa[i]) == T |
+#      grepl("var", speciesnames$taxa[i]) == T)
+#    print(speciesnames$taxa[i])
+#}
 
+# Subspecies and variants
 subsvar <-
   speciesnames[(grepl("subsp", speciesnames$taxa) == T |
                   grepl("var", speciesnames$taxa) == T) , ]
+
+# Species only
 speconly <-
   speciesnames[(grepl("subsp", speciesnames$taxa) == F &
                   grepl("var", speciesnames$taxa) == F) , ]
@@ -88,6 +103,7 @@ subsvar$taxa <- trim.leading(subsvar$taxa)
 for (i in 1:length(speciesnames$taxa)) {
   a <-
     as.numeric(rownames(speciesnames[i, ])) - as.numeric(rownames(genusnames))
+  
   if (grepl("subsp", speciesnames$taxa[i]) == T |
       grepl("var", speciesnames$taxa[i]) == T)
   {
@@ -95,7 +111,7 @@ for (i in 1:length(speciesnames$taxa)) {
       as.numeric(rownames(speciesnames[i, ])) - as.numeric(rownames(speconly))
     speciesnames$fullnames2[i] <-
       paste(genusnames$taxa[which.min(a[a > 0])],
-            speconly$taxa[which.min(b[b > 0])],
+            speconly$taxa[which.min(b[b > 0])],              
             speciesnames$taxa[i],
             sep = ' ')
   }
@@ -109,42 +125,52 @@ for (i in 1:length(speciesnames$taxa)) {
   }
 }
 
+
 #Need to find single genus names and match to full binomial
 #Species name from TAXAREG
-taxareg <-
-  read.csv(
-    'ADD URL',
-    header = T,
-    encoding = 'UTF-8'
-  )
-taxaregspplist <-
-  as.character(taxareg$GNAVN[taxareg$GYLDIG == 'TRUE' &
-                               taxareg$TAXATYPE == 'A'])
+#taxareg <-
+#  read.csv(
+#    paste(tax),
+#    header = T,
+#    encoding = 'UTF-8'
+#  )
+#taxaregspplist <-
+#  as.character(taxareg$GNAVN[taxareg$GYLDIG == 'TRUE' &
+#                               taxareg$TAXATYPE == 'A'])
 
 #Split up names and select genus and spp
-taxareggen <- do.call(rbind, (strsplit(taxaregspplist, ' ')))[, 1:2]
+#taxareggen <- do.call(rbind, (strsplit(taxaregspplist, ' ')))[, 1:2]
+
+
+
 
 #Make a dataframe for appending monogeneric species
-
 singlegenus <- data.frame(taxa = c(),
                           presence = c(),
                           fullnames = c())
 
 for (i in 1:nrow(genusnames)) {
   a <- as.numeric(rownames(genusnames))
-  ifelse(a[i + 1] - a[i] == 1,
+  ifelse(a[i + 1] - a[i] == 1,                                   # if there is no gap between two genus names ...->
          singlegenus <- rbind(singlegenus, genusnames[i, ]),
          print(i))
 }
-singlegenus <- rbind(singlegenus, genusnames[nrow(genusnames), ])
+singlegenus <- rbind(singlegenus, genusnames[nrow(genusnames), ])   # add the last row manually # Viscum is a single genus
+singlegenus$fullnames2 <- singlegenus$taxa
 #Match genus name with binomial name
-for (i in 1:nrow(singlegenus)) {
-  singlegenus$fullnames2[i] <-
-    taxaregspplist[match(singlegenus[i, 1], taxareggen)]
-}
-#Handle alternative spellings of Honkenya/Honckenya
-singlegenus$fullnames2[singlegenus$taxa == 'Honkenya'] <-
-  'Honckenya peploides'
+#for (i in 1:nrow(singlegenus)) {
+#  singlegenus$fullnames2[i] <-
+#    taxaregspplist[match(singlegenus[i, 1], taxareggen)]   # picks the first one
+#}
+
+
+
+
+#Handle alternative spellings of Honkenya/Honckenya    # Fixed in excel
+#singlegenus$fullnames2[singlegenus$taxa == 'Honkenya'] <-
+#  'Honckenya peploides'
+
+  
 
 #Join together
 full_list <- rbind(singlegenus, speciesnames)
@@ -163,13 +189,28 @@ xtabs(~presence,data=spp_occurences)
 split(spp_occurences$fullnames2,spp_occurences$presence)
 
 
+# remove subsp. from species names
+spp_occurences$fullnames2 <- gsub("subsp. ", "", spp_occurences$fullnames2)
+# Change/update taxa names
+spp_occurences$fullnames2[spp_occurences$fullnames2 == 'Trientalis borealis'] <- "Lysimachia europea"
+spp_occurences$fullnames2 <- gsub("Leodonton", "Scorzoneroides", spp_occurences$fullnames2)
+
+
+
+# Fixing double spaces
+spp_occurences$fullnames2 <- gsub("  ", " ", spp_occurences$fullnames2)
+
 # Handling location and other meta data ----------------------------------------------
 
 #Date
 date<-as.Date(paste(metadata$Day,metadata$Month,metadata$Year,sep='/'),'%d/%m/%Y')
 
 #list of recorders
-recorders<-c(metadata$Filled.out.by.1.,metadata$Filled.out.by.2,metadata$Filled.out.by.3,metadata$Filled.out.by.4,metadata$Filled.out.by.5)
+recorders<-c(metadata$Filled.out.by.1.,
+             metadata$Filled.out.by.2,
+             metadata$Filled.out.by.3,
+             metadata$Filled.out.by.4,
+             metadata$Filled.out.by.5)
 #Remove NA recorders
 recs<-recorders[!is.na(recorders)]
 
@@ -211,9 +252,9 @@ dwc<-data.frame(
                 datasetName=rep('Vascular plant crosslists',times=nrow(spp_occurences)),
                 basisOfRecord=rep('HumanObservation',times=nrow(spp_occurences)),
     #Occurrrence
-                recordedBy=rep(paste(recs,sep='|'),times=nrow(spp_occurences)),
+                recordedBy=rep(paste(recs2,collapse = ' | '),times=nrow(spp_occurences)),
                 organismQuantity=spp_occurences$presence,
-                organismQuantityType=rep('Description of relatie abundance',times=nrow(spp_occurences)),
+                organismQuantityType=rep('Description of relative abundance',times=nrow(spp_occurences)),
     #Make GUUI for occurrence ID?
                 occurrenceID=rep(paste('Crosslist',date,metadata$Lokalitet,spp_occurences$fullnames2,sep='_')),#,times=nrow(spp_occurences)),
     #Event
@@ -232,7 +273,7 @@ dwc<-data.frame(
                 decimalLatitude=rep(spdf@coords[,2],times=nrow(spp_occurences)),
                 decimalLongitude=rep(spdf@coords[,1],times=nrow(spp_occurences)),
                 coordinateUncertaintyInMeters=rep(metadata$Location.uncertainty,times=nrow(spp_occurences)),
-                verbatimLocality=rep(metadata$Decription.of.locality,times=nrow(spp_occurences)),
+                verbatimLocality=rep(metadata$Local.place.name,times=nrow(spp_occurences)),
                 minimumElevationInMeters=rep(metadata$Elevation.lower,times=nrow(spp_occurences)),
                 maximumElevationInMeters=rep(metadata$Elevation.upper,times=nrow(spp_occurences)),
     #Taxon
@@ -243,4 +284,4 @@ dwc
 
 fileid<-paste('Crosslist',date,metadata$Lokalitet,sep='_')
 
-write.csv(dwc,file=as.character(paste('ADD URL',fileid,'.csv',sep='')),row.names=F)
+write.csv(dwc,file=as.character(paste(destination,fileid,'.csv',sep='')),row.names=F)
