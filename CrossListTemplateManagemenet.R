@@ -1,7 +1,7 @@
 #Processing Crosslist templates
 
 rm(list=ls())
-require(xlsx)
+library(readxl)
 require(sp)
 require(ggmap)
 require(gridExtra)
@@ -9,37 +9,30 @@ require(rgdal)
 
 
 # type in the URLs for your data
-dat <- "M:\\Anders L Kolstad\\R\\R_projects\\crosslists\\test_data2.xlsx"
+dat <- "M:\\Anders L Kolstad\\NBF_TLA\\krysslister\\Kryssliste_skardfjellet25aug2018.xlsx"
 tax <- "M:\\Anders L Kolstad\\R\\R_projects\\crosslists\\Crosslist_Shiny\\Crosslist_Shiny\\data\\TAXAREG.csv"
-destination <- "M:\\Anders L Kolstad\\R\\R_projects\\crosslists"
+destination <- "M:\\Anders L Kolstad\\NBF_TLA\\krysslister\\"
 
 
 
 # Importing species data and metadata -------------------------------------
 
 
-crosslist <-
-  read.xlsx(
-    paste(dat),
-    sheetName = 'Species',
-    endRow = 84,
-    stringsAsFactors = F,
-    encoding = "UTF-8"
-  )
+crosslist <- 
+  read_excel(paste(dat),
+     sheet = "Species")
+
 
 metadata_t <-
-  read.xlsx(
+  read_excel(
     paste(dat),
-    sheetName = 'MetaData',
-    stringsAsFactors = F,
-    header = F,
-    encoding = 'UTF-8'
-  )
+    sheet = 'MetaData',
+    col_names = FALSE)
 
 #Transpose metadata
 metadata <- data.frame(t(metadata_t[, 2]), stringsAsFactors = F)
-names(metadata) <- metadata_t$X1
-metadata <- data.frame(metadata, check.names = T)
+names(metadata) <- metadata_t$X__1
+#metadata <- data.frame(metadata, check.names = T)
 
 # Processes the taxa names ------------------------------------------------
 
@@ -206,11 +199,11 @@ spp_occurences$fullnames2 <- gsub("  ", " ", spp_occurences$fullnames2)
 date<-as.Date(paste(metadata$Day,metadata$Month,metadata$Year,sep='/'),'%d/%m/%Y')
 
 #list of recorders
-recorders<-c(metadata$Filled.out.by.1.,
-             metadata$Filled.out.by.2,
-             metadata$Filled.out.by.3,
-             metadata$Filled.out.by.4,
-             metadata$Filled.out.by.5)
+recorders<-c(metadata$'Filled out by 1',
+             metadata$'Filled out by 2',
+             metadata$'Filled out by 3',
+             metadata$'Filled out by 4',
+             metadata$'Filled out by 5')
 #Remove NA recorders
 recs<-recorders[!is.na(recorders)]
 
@@ -246,38 +239,38 @@ grid.arrange(m2,m1,ncol=2)
 
 # Write Darwin core  ------------------------------------------------------
 
-dwc<-data.frame(
+dwc<- data.frame(
     #Record level            
-                institutionCode=rep('NTNU University Museum',times=nrow(spp_occurences)),
-                datasetName=rep('Vascular plant crosslists',times=nrow(spp_occurences)),
-                basisOfRecord=rep('HumanObservation',times=nrow(spp_occurences)),
+                institutionCode = rep('NTNU University Museum',times=nrow(spp_occurences)),
+                datasetName     = rep('Vascular plant crosslists',times=nrow(spp_occurences)),
+                basisOfRecord   = rep('HumanObservation',times=nrow(spp_occurences)),
     #Occurrrence
-                recordedBy=rep(paste(recs2,collapse = ' | '),times=nrow(spp_occurences)),
-                organismQuantity=spp_occurences$presence,
-                organismQuantityType=rep('Description of relative abundance',times=nrow(spp_occurences)),
+                recordedBy      = rep(paste(recs,collapse = ' | '),times=nrow(spp_occurences)),      # changed to recs from recs2
+                organismQuantity= spp_occurences$presence,
+                organismQuantityType = rep('Description of relative abundance',times=nrow(spp_occurences)),
     #Make GUUI for occurrence ID?
-                occurrenceID=rep(paste('Crosslist',date,metadata$Lokalitet,spp_occurences$fullnames2,sep='_')),#,times=nrow(spp_occurences)),
+                occurrenceID    = paste('Crosslist',date,metadata$Lokalitet,spp_occurences$fullnames2,sep='_'),#,times=nrow(spp_occurences)),
     #Event
-                eventid<-rep(paste('NTNU_University_Museum_Crosslist',date,metadata$Lokalitet,sep='_'),times=nrow(spp_occurences)),
-                day=rep(metadata$Day,times=nrow(spp_occurences)),
-                month=rep(metadata$Month,times=nrow(spp_occurences)),
-                year=rep(metadata$Year,times=nrow(spp_occurences)),
-                habitat=rep(metadata$Vegetation.type.habitat,times=nrow(spp_occurences)),
-                sampleSizeValue=rep(metadata$Sampled.area,times=nrow(spp_occurences)),
-                sampleSizeUnit=rep('square metre',times=nrow(spp_occurences)),
+                eventid         = rep(paste('NTNU_University_Museum_Crosslist',date,metadata$Lokalitet,sep='_'),times=nrow(spp_occurences)),
+                day             = rep(metadata$Day,times=nrow(spp_occurences)),
+                month           = rep(metadata$Month,times=nrow(spp_occurences)),
+                year            = rep(metadata$Year,times=nrow(spp_occurences)),
+                habitat         = rep(metadata$`Vegetation type/habitat`,times=nrow(spp_occurences)),
+                sampleSizeValue = rep(metadata$`Sampled area`,times=nrow(spp_occurences)),
+                sampleSizeUnit  = rep('square metre',times=nrow(spp_occurences)),
     #Location            
-                country=rep('Norway',times=nrow(spp_occurences)),
-                county=rep(metadata$Fylke,times=nrow(spp_occurences)),
-                municipality=rep(metadata$Kommune,times=nrow(spp_occurences)),
-                location=rep(metadata$Lokalitet,times=nrow(spp_occurences)),
-                decimalLatitude=rep(spdf@coords[,2],times=nrow(spp_occurences)),
-                decimalLongitude=rep(spdf@coords[,1],times=nrow(spp_occurences)),
-                coordinateUncertaintyInMeters=rep(metadata$Location.uncertainty,times=nrow(spp_occurences)),
-                verbatimLocality=rep(metadata$Local.place.name,times=nrow(spp_occurences)),
-                minimumElevationInMeters=rep(metadata$Elevation.lower,times=nrow(spp_occurences)),
-                maximumElevationInMeters=rep(metadata$Elevation.upper,times=nrow(spp_occurences)),
+                country         = rep('Norway',times=nrow(spp_occurences)),
+                county          = rep(metadata$Fylke,times=nrow(spp_occurences)),
+                municipality    = rep(metadata$Kommune,times=nrow(spp_occurences)),
+                location        = rep(metadata$Lokalitet,times=nrow(spp_occurences)),
+                decimalLatitude =ifelse(exists("spdf"), rep(spdf@coords[,2],times=nrow(spp_occurences)), NA),
+                decimalLongitude=ifelse(exists("spdf"), rep(spdf@coords[,1],times=nrow(spp_occurences)), NA),
+                coordinateUncertaintyInMeters = rep(metadata$`Location uncertainty`,times=nrow(spp_occurences)),
+                verbatimLocality = rep(metadata$Lokalitet,times=nrow(spp_occurences)),
+                minimumElevationInMeters = rep(metadata$`Elevation lower`,times=nrow(spp_occurences)),
+                maximumElevationInMeters = rep(metadata$`Elevation upper`,times=nrow(spp_occurences)),
     #Taxon
-                scientificName=spp_occurences$fullnames2
+                scientificName = spp_occurences$fullnames2
                 
 )
 dwc
