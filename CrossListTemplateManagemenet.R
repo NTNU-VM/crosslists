@@ -10,6 +10,8 @@ require(rgdal)
 
 # type in the URLs for your data
 dat <- "M:\\Anders L Kolstad\\NBF_TLA\\krysslister\\Kryssliste_skardfjellet25aug2018.xlsx"
+dat <- "test_data.xlsx"
+
 tax <- "M:\\Anders L Kolstad\\R\\R_projects\\crosslists\\Crosslist_Shiny\\Crosslist_Shiny\\data\\TAXAREG.csv"
 destination <- "M:\\Anders L Kolstad\\NBF_TLA\\krysslister\\"
 
@@ -210,12 +212,12 @@ recs<-recorders[!is.na(recorders)]
 
 #Coordinates
 #Latlong coords
-if(metadata$Location.type=='latlon'){
+if(metadata$`Location type`=='latlon'){
   coords<-c(as.numeric(metadata$Longitude),as.numeric(metadata$Latitude))
   spdf<-SpatialPoints(as.data.frame(t(coords)),CRS("+proj=longlat +datum=WGS84"))
 }
 #Convert coordinates if not latlong
-if(metadata$Location.type=='UTM'){
+if(metadata$`Location type`=='UTM'){
   crsutm<-as.character(paste("+proj=utm +zone=",metadata$UTM.sone.WGS.1984,sep=""))  
   coordsutm<-SpatialPoints(as.data.frame(t(c(as.numeric(metadata$Easting),as.numeric(metadata$Northing)))),CRS(crsutm))
   spdf<-spTransform(coordsutm,CRS("+proj=longlat +datum=WGS84"))
