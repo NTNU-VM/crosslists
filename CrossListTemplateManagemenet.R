@@ -227,6 +227,7 @@ if(metadata$`Location type`=='UTM'){
 par(mfrow=c(1,2))
 #Close map
 map<-ggmap(get_map(spdf@coords,maptype='hybrid',zoom=17))
+
 m1<-map + geom_point(aes(x=spdf@coords[1],y=spdf@coords[2]), color="red", size=3, alpha=0.5)+ggtitle('Check locality provided')+theme(plot.title = element_text(lineheight=.8, face="bold"))
 #Far map 
 mapf<-ggmap(get_map(spdf@coords,maptype='hybrid',zoom=8))
