@@ -223,17 +223,33 @@ if(metadata$`Location type`=='UTM'){
   spdf<-spTransform(coordsutm,CRS("+proj=longlat +datum=WGS84"))
 }
 
-#Map coordinates
-par(mfrow=c(1,2))
-#Close map
-map<-ggmap(get_map(spdf@coords,maptype='hybrid',zoom=17))
 
-m1<-map + geom_point(aes(x=spdf@coords[1],y=spdf@coords[2]), color="red", size=3, alpha=0.5)+ggtitle('Check locality provided')+theme(plot.title = element_text(lineheight=.8, face="bold"))
-#Far map 
-mapf<-ggmap(get_map(spdf@coords,maptype='hybrid',zoom=8))
-m2<-mapf + geom_point(aes(x=spdf@coords[1],y=spdf@coords[2]), color="red", size=3, alpha=0.5)+ggtitle('Check locality provided')+theme(plot.title = element_text(lineheight=.8, face="bold"))
+
+#Map coordinates
+# leaflet option
+library( leaflet )
+library( magrittr )
+
+subscr<-data.frame(lat=c(spdf@coords[2]),
+                   lon=c(spdf@coords[1]))
+
 x11(12,8)
-grid.arrange(m2,m1,ncol=2)
+leaflet() %>% addTiles(group = "OSM", 
+                      options = providerTileOptions(minZoom = 2, maxZoom = 100))  %>% 
+                        addCircleMarkers(data = subscr,
+                                  lat = ~lat, lng = ~lon,
+                                  color = "blue")
+#ggmap option
+#par(mfrow=c(1,2))
+#Close map
+#map<-ggmap(get_map(spdf@coords,maptype='hybrid',zoom=17))
+
+#m1<-map + geom_point(aes(x=spdf@coords[1],y=spdf@coords[2]), color="red", size=3, alpha=0.5)+ggtitle('Check locality provided')+theme(plot.title = element_text(lineheight=.8, face="bold"))
+#Far map 
+#mapf<-ggmap(get_map(spdf@coords,maptype='hybrid',zoom=8))
+#m2<-mapf + geom_point(aes(x=spdf@coords[1],y=spdf@coords[2]), color="red", size=3, alpha=0.5)+ggtitle('Check locality provided')+theme(plot.title = element_text(lineheight=.8, face="bold"))
+#x11(12,8)
+#grid.arrange(m2,m1,ncol=2)
 
 #RgoogleMaps solution
 #require(RgoogleMaps)
